@@ -14,8 +14,6 @@ services:
   frontend:
     build: ./frontend
     restart: unless-stopped
-    ports:
-      - "${PORT:-8080}:80"
     depends_on:
       - backend
     environment:
