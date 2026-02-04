@@ -91,6 +91,7 @@ class Player:
     score: int = 0
     websocket: Optional[WebSocket] = None
     is_bot: bool = False
+    last_hit_by: Optional[str] = None  # ID of player who last hit this player
 
     def to_dict(self):
         return {
@@ -435,6 +436,7 @@ class GameManager:
         room.countdown = COUNTDOWN_SECONDS
         for i, player in enumerate(room.players.values()):
             player.alive = True
+            player.last_hit_by = None
             angle = 2 * math.pi * i / len(room.players)
             distance = ARENA_RADIUS * 0.6
             player.x = math.cos(angle) * distance
@@ -484,6 +486,11 @@ class GameManager:
             distance = math.sqrt(player.x ** 2 + player.y ** 2)
             if distance > ARENA_RADIUS + PLAYER_RADIUS:
                 player.alive = False
+                # Award point to player who pushed them out
+                if player.last_hit_by and player.last_hit_by in room.players:
+                    killer = room.players[player.last_hit_by]
+                    if killer.alive or killer.id != player.id:
+                        killer.score += 1
 
         # Check collisions between players
         for i, p1 in enumerate(alive_players):
@@ -493,7 +500,10 @@ class GameManager:
                 distance = math.sqrt(dx * dx + dy * dy)
 
                 if distance < PLAYER_RADIUS * 2 and distance > 0:
-                    # Collision!
+                    # Collision! Track who hit whom
+                    p1.last_hit_by = p2.id
+                    p2.last_hit_by = p1.id
+
                     nx = dx / distance
                     ny = dy / distance
 
@@ -558,6 +568,7 @@ class GameManager:
                     room.countdown = COUNTDOWN_SECONDS
                     for i, player in enumerate(room.players.values()):
                         player.alive = True
+                        player.last_hit_by = None
                         angle = 2 * math.pi * i / len(room.players)
                         distance = ARENA_RADIUS * 0.6
                         player.x = math.cos(angle) * distance
@@ -598,6 +609,7 @@ class GameManager:
                         player.vx = 0
                         player.vy = 0
                         player.alive = True
+                        player.last_hit_by = None
 
             elif room.state == "playing":
                 self.update_bot_ai(room)  # Update bot movements
@@ -625,6 +637,7 @@ class GameManager:
                         room.countdown = COUNTDOWN_SECONDS
                         for i, player in enumerate(room.players.values()):
                             player.alive = True
+                            player.last_hit_by = None
                             angle = 2 * math.pi * i / len(room.players)
                             distance = ARENA_RADIUS * 0.6
                             player.x = math.cos(angle) * distance
