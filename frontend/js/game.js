@@ -3,6 +3,7 @@ class SumoGame {
         this.ws = null;
         this.playerId = null;
         this.room = null;
+        this.isOwner = false;
         this.canvas = document.getElementById('game-canvas');
         this.ctx = this.canvas.getContext('2d');
 
@@ -31,18 +32,18 @@ class SumoGame {
             document.body.style.backgroundColor = tg.backgroundColor || '#1a1a2e';
         }
 
-        // Event listeners
-        const playBtn = document.getElementById('play-btn');
-        const nameInput = document.getElementById('player-name');
+        // Event listeners - Menu
+        document.getElementById('create-btn').addEventListener('click', () => this.createRoom());
+        document.getElementById('join-btn').addEventListener('click', () => this.joinRoom());
 
-        playBtn.addEventListener('click', () => {
-            console.log('Play button clicked');
-            this.connect();
+        document.getElementById('room-code').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.joinRoom();
         });
 
-        nameInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.connect();
-        });
+        // Event listeners - Waiting room
+        document.getElementById('start-btn').addEventListener('click', () => this.startGame());
+        document.getElementById('copy-code-btn').addEventListener('click', () => this.copyRoomCode());
+        document.getElementById('share-btn').addEventListener('click', () => this.shareRoom());
 
         // Canvas resize
         this.resizeCanvas();
@@ -85,9 +86,26 @@ class SumoGame {
         document.getElementById(screenId).classList.add('active');
     }
 
-    connect() {
-        const name = document.getElementById('player-name').value.trim() || 'Player';
-        console.log('Connecting as:', name);
+    getName() {
+        return document.getElementById('player-name').value.trim() || 'Игрок';
+    }
+
+    createRoom() {
+        this.connect('create');
+    }
+
+    joinRoom() {
+        const roomCode = document.getElementById('room-code').value.trim().toUpperCase();
+        if (!roomCode) {
+            alert('Введите код комнаты');
+            return;
+        }
+        this.connect('join', roomCode);
+    }
+
+    connect(action, roomId = null) {
+        const name = this.getName();
+        console.log(`${action} room as:`, name);
 
         // Determine WebSocket URL
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -101,10 +119,14 @@ class SumoGame {
 
             this.ws.onopen = () => {
                 console.log('WebSocket connected');
-                this.ws.send(JSON.stringify({
-                    type: 'join',
+                const message = {
+                    type: action,
                     name: name
-                }));
+                };
+                if (roomId) {
+                    message.room_id = roomId;
+                }
+                this.ws.send(JSON.stringify(message));
             };
 
             this.ws.onmessage = (event) => {
@@ -114,12 +136,12 @@ class SumoGame {
 
             this.ws.onclose = (event) => {
                 console.log('WebSocket closed:', event.code, event.reason);
-                this.showScreen('join-screen');
+                this.showScreen('menu-screen');
             };
 
             this.ws.onerror = (error) => {
                 console.error('WebSocket error:', error);
-                this.showScreen('join-screen');
+                this.showScreen('menu-screen');
             };
         } catch (e) {
             console.error('Failed to create WebSocket:', e);
@@ -130,20 +152,32 @@ class SumoGame {
         console.log('Received:', message.type);
 
         switch (message.type) {
+            case 'error':
+                alert(message.message);
+                this.showScreen('menu-screen');
+                break;
+
             case 'welcome':
                 this.playerId = message.player_id;
                 this.room = message.room;
+                this.isOwner = this.room.owner_id === this.playerId;
                 this.showScreen('waiting-screen');
-                this.updatePlayersList();
+                this.updateWaitingRoom();
                 break;
 
             case 'player_joined':
             case 'player_left':
                 this.room = message.room;
-                this.updatePlayersList();
+                this.isOwner = this.room.owner_id === this.playerId;
+                this.updateWaitingRoom();
+                break;
+
+            case 'game_starting':
+                this.room = message.room;
                 break;
 
             case 'countdown':
+                this.room = message.room;
                 this.showScreen('countdown-screen');
                 document.getElementById('countdown-number').textContent = message.countdown;
                 // Haptic feedback
@@ -164,7 +198,11 @@ class SumoGame {
         }
     }
 
-    updatePlayersList() {
+    updateWaitingRoom() {
+        // Update room code
+        document.getElementById('room-code-value').textContent = this.room.id;
+
+        // Update players list
         const container = document.getElementById('players-list');
         container.innerHTML = '';
 
@@ -172,8 +210,63 @@ class SumoGame {
             const tag = document.createElement('div');
             tag.className = 'player-tag';
             tag.style.backgroundColor = player.color;
-            tag.textContent = player.name + (player.id === this.playerId ? ' (ты)' : '');
+
+            let html = player.name;
+            if (player.id === this.playerId) html += ' (ты)';
+            if (player.id === this.room.owner_id) html += '<span class="owner-badge">Хост</span>';
+            tag.innerHTML = html;
+
             container.appendChild(tag);
+        }
+
+        // Show/hide start button
+        const startBtn = document.getElementById('start-btn');
+        const waitingHint = document.getElementById('waiting-hint');
+
+        if (this.isOwner) {
+            startBtn.style.display = 'block';
+            if (Object.keys(this.room.players).length >= 2) {
+                startBtn.disabled = false;
+                waitingHint.textContent = 'Нажми СТАРТ когда все готовы';
+            } else {
+                startBtn.disabled = true;
+                waitingHint.textContent = 'Нужно минимум 2 игрока';
+            }
+        } else {
+            startBtn.style.display = 'none';
+            waitingHint.textContent = 'Ожидайте, пока хост начнёт игру';
+        }
+    }
+
+    startGame() {
+        if (this.ws?.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({ type: 'start' }));
+        }
+    }
+
+    copyRoomCode() {
+        const code = this.room?.id || '';
+        navigator.clipboard.writeText(code).then(() => {
+            // Haptic feedback
+            if (window.Telegram?.WebApp?.HapticFeedback) {
+                Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+            }
+        });
+    }
+
+    shareRoom() {
+        const code = this.room?.id || '';
+        const text = `Присоединяйся к игре в Sumo.io! Код комнаты: ${code}`;
+        const url = `https://t.me/sumo_io_bot`;
+
+        if (window.Telegram?.WebApp) {
+            // Share via Telegram
+            Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`);
+        } else if (navigator.share) {
+            navigator.share({ title: 'Sumo.io', text: text, url: url });
+        } else {
+            this.copyRoomCode();
+            alert(`Код скопирован: ${code}`);
         }
     }
 
@@ -295,7 +388,7 @@ class SumoGame {
 
             // Name
             ctx.fillStyle = '#fff';
-            ctx.font = `bold ${12 * scale}px sans-serif`;
+            ctx.font = `bold ${Math.max(10, 12 * scale)}px sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(player.name, px, py);

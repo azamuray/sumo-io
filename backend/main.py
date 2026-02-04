@@ -20,14 +20,14 @@ app.add_middleware(
 )
 
 # Game constants
-ARENA_RADIUS = 300
+ARENA_RADIUS = 400  # Increased from 300
 PLAYER_RADIUS = 25
-FRICTION = 0.98
-BOUNCE_FORCE = 15
+FRICTION = 0.96  # More friction (was 0.98)
+BOUNCE_FORCE = 8  # Reduced from 15
 TICK_RATE = 1 / 60  # 60 FPS
 MAX_PLAYERS_PER_ROOM = 8
 MIN_PLAYERS_TO_START = 2
-COUNTDOWN_SECONDS = 5
+COUNTDOWN_SECONDS = 3
 
 
 @dataclass
@@ -60,6 +60,7 @@ class Player:
 @dataclass
 class Room:
     id: str
+    owner_id: Optional[str] = None  # Creator of the room
     players: dict[str, Player] = field(default_factory=dict)
     state: str = "waiting"  # waiting, countdown, playing, finished
     countdown: int = COUNTDOWN_SECONDS
@@ -68,6 +69,7 @@ class Room:
     def to_dict(self):
         return {
             "id": self.id,
+            "owner_id": self.owner_id,
             "players": {pid: p.to_dict() for pid, p in self.players.items()},
             "state": self.state,
             "countdown": self.countdown,
@@ -87,27 +89,30 @@ class GameManager:
         ]
 
     def generate_room_id(self) -> str:
-        return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        return ''.join(random.choices(string.ascii_uppercase, k=4))
 
     def generate_player_id(self) -> str:
         return ''.join(random.choices(string.ascii_lowercase + string.digits, k=12))
 
-    def find_or_create_room(self) -> Room:
-        # Find room with space
-        for room in self.rooms.values():
-            if room.state == "waiting" and len(room.players) < MAX_PLAYERS_PER_ROOM:
-                return room
-
-        # Create new room
+    def create_room(self) -> Room:
+        """Create a new private room"""
         room_id = self.generate_room_id()
+        while room_id in self.rooms:
+            room_id = self.generate_room_id()
         room = Room(id=room_id)
         self.rooms[room_id] = room
         return room
 
+    def get_room(self, room_id: str) -> Optional[Room]:
+        """Get room by ID (case insensitive)"""
+        return self.rooms.get(room_id.upper())
+
     def spawn_position(self, room: Room) -> tuple[float, float]:
         """Generate spawn position on the edge of arena"""
-        angle = random.uniform(0, 2 * math.pi)
-        distance = ARENA_RADIUS * 0.7
+        num_players = len(room.players)
+        # Distribute players evenly around the arena
+        angle = (2 * math.pi * num_players / max(8, num_players + 1)) + random.uniform(-0.2, 0.2)
+        distance = ARENA_RADIUS * 0.6
         x = math.cos(angle) * distance
         y = math.sin(angle) * distance
         return x, y
@@ -128,6 +133,11 @@ class GameManager:
 
         room.players[player_id] = player
         self.player_rooms[player_id] = room.id
+
+        # First player becomes owner
+        if room.owner_id is None:
+            room.owner_id = player_id
+
         return player
 
     def remove_player(self, player_id: str):
@@ -140,11 +150,42 @@ class GameManager:
             if player_id in room.players:
                 del room.players[player_id]
 
+            # Transfer ownership if owner left
+            if room.owner_id == player_id and len(room.players) > 0:
+                room.owner_id = next(iter(room.players.keys()))
+
             # Clean up empty rooms
             if len(room.players) == 0:
                 del self.rooms[room_id]
 
         del self.player_rooms[player_id]
+
+    def start_game(self, player_id: str) -> bool:
+        """Start game - only owner can do this"""
+        if player_id not in self.player_rooms:
+            return False
+
+        room_id = self.player_rooms[player_id]
+        room = self.rooms.get(room_id)
+
+        if not room:
+            return False
+
+        # Only owner can start
+        if room.owner_id != player_id:
+            return False
+
+        # Need at least 2 players
+        if len(room.players) < MIN_PLAYERS_TO_START:
+            return False
+
+        # Can only start from waiting state
+        if room.state != "waiting":
+            return False
+
+        room.state = "countdown"
+        room.countdown = COUNTDOWN_SECONDS
+        return True
 
     def apply_input(self, player_id: str, dx: float, dy: float):
         if player_id not in self.player_rooms:
@@ -164,8 +205,8 @@ class GameManager:
         if magnitude > 0:
             dx = dx / magnitude
             dy = dy / magnitude
-            player.vx += dx * 2
-            player.vy += dy * 2
+            player.vx += dx * 1.5  # Reduced from 2
+            player.vy += dy * 1.5
 
     def update_physics(self, room: Room):
         if room.state != "playing":
@@ -206,11 +247,23 @@ class GameManager:
                     p2.x += nx * overlap / 2
                     p2.y += ny * overlap / 2
 
-                    # Bounce velocity
-                    p1.vx -= nx * BOUNCE_FORCE
-                    p1.vy -= ny * BOUNCE_FORCE
-                    p2.vx += nx * BOUNCE_FORCE
-                    p2.vy += ny * BOUNCE_FORCE
+                    # Calculate relative velocity
+                    dvx = p1.vx - p2.vx
+                    dvy = p1.vy - p2.vy
+                    dvn = dvx * nx + dvy * ny
+
+                    # Only bounce if moving towards each other
+                    if dvn > 0:
+                        p1.vx -= nx * dvn * 0.8
+                        p1.vy -= ny * dvn * 0.8
+                        p2.vx += nx * dvn * 0.8
+                        p2.vy += ny * dvn * 0.8
+
+                        # Add small bounce
+                        p1.vx -= nx * BOUNCE_FORCE * 0.5
+                        p1.vy -= ny * BOUNCE_FORCE * 0.5
+                        p2.vx += nx * BOUNCE_FORCE * 0.5
+                        p2.vy += ny * BOUNCE_FORCE * 0.5
 
         # Check for winner
         alive_players = [p for p in room.players.values() if p.alive]
@@ -238,16 +291,13 @@ class GameManager:
     async def run_game_loop(self, room: Room):
         while room.id in self.rooms and len(room.players) > 0:
             if room.state == "waiting":
-                if len(room.players) >= MIN_PLAYERS_TO_START:
-                    room.state = "countdown"
-                    room.countdown = COUNTDOWN_SECONDS
-                else:
-                    await asyncio.sleep(0.1)  # Wait for more players
+                await asyncio.sleep(0.1)
 
             elif room.state == "countdown":
                 await self.broadcast(room, {
                     "type": "countdown",
                     "countdown": room.countdown,
+                    "room": room.to_dict(),
                 })
                 await asyncio.sleep(1)
                 room.countdown -= 1
@@ -255,10 +305,11 @@ class GameManager:
                 if room.countdown <= 0:
                     room.state = "playing"
                     # Reset positions
-                    for player in room.players.values():
-                        x, y = self.spawn_position(room)
-                        player.x = x
-                        player.y = y
+                    for i, player in enumerate(room.players.values()):
+                        angle = 2 * math.pi * i / len(room.players)
+                        distance = ARENA_RADIUS * 0.6
+                        player.x = math.cos(angle) * distance
+                        player.y = math.sin(angle) * distance
                         player.vx = 0
                         player.vy = 0
                         player.alive = True
@@ -282,11 +333,13 @@ class GameManager:
                 # Reset for new round
                 room.state = "waiting"
                 room.winner = None
-                for player in room.players.values():
+                room.countdown = COUNTDOWN_SECONDS
+                for i, player in enumerate(room.players.values()):
                     player.alive = True
-                    x, y = self.spawn_position(room)
-                    player.x = x
-                    player.y = y
+                    angle = 2 * math.pi * i / len(room.players)
+                    distance = ARENA_RADIUS * 0.6
+                    player.x = math.cos(angle) * distance
+                    player.y = math.sin(angle) * distance
                     player.vx = 0
                     player.vy = 0
 
@@ -314,15 +367,53 @@ async def websocket_endpoint(websocket: WebSocket):
         data = await websocket.receive_text()
         message = json.loads(data)
 
-        if message.get("type") != "join":
-            await websocket.close()
-            return
-
+        msg_type = message.get("type")
         name = message.get("name", "Player")[:15]
 
-        # Find or create room
-        room = game_manager.find_or_create_room()
-        player = game_manager.add_player(room, name, websocket)
+        if msg_type == "create":
+            # Create new room
+            room = game_manager.create_room()
+            player = game_manager.add_player(room, name, websocket)
+
+        elif msg_type == "join":
+            room_id = message.get("room_id", "").upper()
+            if room_id:
+                # Join specific room
+                room = game_manager.get_room(room_id)
+                if not room:
+                    await websocket.send_text(json.dumps({
+                        "type": "error",
+                        "message": "Комната не найдена"
+                    }))
+                    await websocket.close()
+                    return
+                if len(room.players) >= MAX_PLAYERS_PER_ROOM:
+                    await websocket.send_text(json.dumps({
+                        "type": "error",
+                        "message": "Комната заполнена"
+                    }))
+                    await websocket.close()
+                    return
+                if room.state != "waiting":
+                    await websocket.send_text(json.dumps({
+                        "type": "error",
+                        "message": "Игра уже началась"
+                    }))
+                    await websocket.close()
+                    return
+            else:
+                await websocket.send_text(json.dumps({
+                    "type": "error",
+                    "message": "Укажите код комнаты"
+                }))
+                await websocket.close()
+                return
+
+            player = game_manager.add_player(room, name, websocket)
+
+        else:
+            await websocket.close()
+            return
 
         # Send welcome
         await websocket.send_text(json.dumps({
@@ -339,7 +430,7 @@ async def websocket_endpoint(websocket: WebSocket):
         })
 
         # Start game loop if not running
-        if room.state == "waiting" and len(room.players) == 1:
+        if len(room.players) == 1:
             asyncio.create_task(game_manager.run_game_loop(room))
 
         # Handle messages
@@ -351,6 +442,13 @@ async def websocket_endpoint(websocket: WebSocket):
                 dx = float(message.get("dx", 0))
                 dy = float(message.get("dy", 0))
                 game_manager.apply_input(player.id, dx, dy)
+
+            elif message.get("type") == "start":
+                if game_manager.start_game(player.id):
+                    await game_manager.broadcast(room, {
+                        "type": "game_starting",
+                        "room": room.to_dict(),
+                    })
 
     except WebSocketDisconnect:
         pass

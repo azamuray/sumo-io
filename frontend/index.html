@@ -8,24 +8,34 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <!-- Join Screen -->
-    <div id="join-screen" class="screen active">
+    <!-- Menu Screen -->
+    <div id="menu-screen" class="screen active">
         <div class="logo">SUMO<span>.io</span></div>
         <p class="tagline">Столкни всех с арены!</p>
         <input type="text" id="player-name" placeholder="Твоё имя" maxlength="15">
-        <button id="play-btn" class="btn-primary">ИГРАТЬ</button>
+        <button id="create-btn" class="btn-primary">СОЗДАТЬ КОМНАТУ</button>
+        <div class="divider">или</div>
+        <input type="text" id="room-code" placeholder="Код комнаты" maxlength="4" style="text-transform: uppercase;">
+        <button id="join-btn" class="btn-secondary">ПРИСОЕДИНИТЬСЯ</button>
     </div>
 
     <!-- Waiting Screen -->
     <div id="waiting-screen" class="screen">
+        <div class="room-code-display">
+            <div class="room-code-label">Код комнаты:</div>
+            <div id="room-code-value" class="room-code-value">XXXX</div>
+            <button id="copy-code-btn" class="btn-small">Скопировать</button>
+            <button id="share-btn" class="btn-small">Поделиться</button>
+        </div>
         <div class="waiting-title">Ожидание игроков...</div>
         <div id="players-list" class="players-list"></div>
-        <div class="waiting-hint">Минимум 2 игрока для старта</div>
+        <button id="start-btn" class="btn-primary btn-start" style="display: none;">СТАРТ</button>
+        <div id="waiting-hint" class="waiting-hint">Ожидайте, пока владелец начнёт игру</div>
     </div>
 
     <!-- Countdown Screen -->
     <div id="countdown-screen" class="screen">
-        <div id="countdown-number" class="countdown-number">5</div>
+        <div id="countdown-number" class="countdown-number">3</div>
     </div>
 
     <!-- Game Screen -->
