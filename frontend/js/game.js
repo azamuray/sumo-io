@@ -264,18 +264,18 @@ class SumoGame {
 
     shareRoom() {
         const code = this.room?.id || '';
-        const text = `Присоединяйся к игре в Sumo.io! Код комнаты: ${code}`;
-        const url = `https://t.me/sumo_io_bot`;
+        const text = `Играем в Sumo.io! Заходи: @sumo_io_bot\nКод комнаты: ${code}`;
 
-        if (window.Telegram?.WebApp) {
-            // Share via Telegram
-            Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`);
-        } else if (navigator.share) {
-            navigator.share({ title: 'Sumo.io', text: text, url: url });
-        } else {
-            this.copyRoomCode();
-            alert(`Код скопирован: ${code}`);
-        }
+        navigator.clipboard.writeText(text).then(() => {
+            if (window.Telegram?.WebApp?.HapticFeedback) {
+                Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+            }
+            if (window.Telegram?.WebApp?.showAlert) {
+                Telegram.WebApp.showAlert('Скопировано! Отправь это сообщение другу');
+            } else {
+                alert('Скопировано! Отправь это сообщение другу');
+            }
+        });
     }
 
     showResult(winnerId) {
