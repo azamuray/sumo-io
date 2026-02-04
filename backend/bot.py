@@ -19,10 +19,13 @@ async def cmd_play(message: types.Message):
     # Different message and button for group vs private chat
     if message.chat.type in ["group", "supergroup"]:
         # In groups, use inline URL button (web_app doesn't work in groups with inline)
+        # Encode group name for URL
+        import urllib.parse
+        group_name = urllib.parse.quote(message.chat.title or "Группа")
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(
                 text="🎮 Играть в Sumo.io",
-                url=f"{WEBAPP_URL}?startapp=group_{message.chat.id}"
+                url=f"{WEBAPP_URL}?group={message.chat.id}&name={group_name}"
             )]
         ])
         text = "🏟 Кто хочет сразиться?\n\nНажми кнопку — все из группы попадут в одну комнату!"

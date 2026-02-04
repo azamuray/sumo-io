@@ -18,6 +18,17 @@ class SumoGame {
     }
 
     init() {
+        // Check URL parameters first (from group button)
+        const urlParams = new URLSearchParams(window.location.search);
+        const groupFromUrl = urlParams.get('group');
+        const groupNameFromUrl = urlParams.get('name');
+
+        if (groupFromUrl) {
+            this.chatId = groupFromUrl;
+            this.groupName = groupNameFromUrl ? decodeURIComponent(groupNameFromUrl) : null;
+            console.log('Opened from group URL:', this.chatId, this.groupName);
+        }
+
         // Telegram Web App integration
         if (window.Telegram?.WebApp) {
             const tg = Telegram.WebApp;
@@ -32,16 +43,17 @@ class SumoGame {
 
             // Check if opened from a group chat (native Mini App in group)
             const chat = tg.initDataUnsafe?.chat;
-            if (chat?.id) {
+            if (chat?.id && !this.chatId) {
                 this.chatId = chat.id;
+                this.groupName = chat.title || null;
                 console.log('Opened from group chat:', chat.id, chat.title);
             }
 
             // Check startapp parameter (from URL button in group)
             const startParam = tg.initDataUnsafe?.start_param;
-            if (startParam && startParam.startsWith('group_')) {
+            if (startParam && startParam.startsWith('group_') && !this.chatId) {
                 this.chatId = startParam.replace('group_', '');
-                console.log('Opened from group link, chat_id:', this.chatId);
+                console.log('Opened from group startapp:', this.chatId);
             }
 
             // Apply Telegram theme
@@ -58,13 +70,14 @@ class SumoGame {
             if (e.key === 'Enter') this.joinRoom();
         });
 
-        // If opened from group chat, auto-join group room
+        // If opened from group, auto-join group room immediately
         if (this.chatId) {
-            this.showScreen('menu-screen');
-            document.querySelector('.lobby-section').style.display = 'none';
+            console.log('Auto-joining group room...');
             document.getElementById('group-info').style.display = 'block';
-            // Auto-connect after short delay to show UI
-            setTimeout(() => this.joinGroupRoom(), 500);
+            if (this.groupName) {
+                document.querySelector('.group-text').textContent = `Подключение к "${this.groupName}"...`;
+            }
+            this.joinGroupRoom();
         } else {
             // Load public rooms on start
             this.refreshLobby();
@@ -212,6 +225,9 @@ class SumoGame {
                 }
                 if (action === 'join_chat' && this.chatId) {
                     message.chat_id = this.chatId;
+                    if (this.groupName) {
+                        message.group_name = this.groupName;
+                    }
                 }
                 this.ws.send(JSON.stringify(message));
             };
@@ -291,8 +307,17 @@ class SumoGame {
     }
 
     updateWaitingRoom() {
-        // Update room code
-        document.getElementById('room-code-value').textContent = this.room.id;
+        // Update room code or group name
+        const roomCodeValue = document.getElementById('room-code-value');
+        const roomCodeLabel = document.querySelector('.room-code-label');
+
+        if (this.room.group_name) {
+            roomCodeLabel.textContent = 'Комната группы:';
+            roomCodeValue.textContent = this.room.group_name;
+        } else {
+            roomCodeLabel.textContent = 'Код комнаты:';
+            roomCodeValue.textContent = this.room.id;
+        }
 
         // Update players list
         const container = document.getElementById('players-list');

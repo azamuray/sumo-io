@@ -113,6 +113,7 @@ class Room:
     owner_id: Optional[str] = None  # Creator of the room
     is_public: bool = False  # Public rooms visible in lobby
     is_bot_room: bool = False  # Room with bots
+    group_name: Optional[str] = None  # Name of Telegram group (for group rooms)
     players: dict[str, Player] = field(default_factory=dict)
     state: str = "waiting"  # waiting, countdown, playing, finished
     countdown: int = COUNTDOWN_SECONDS
@@ -124,6 +125,7 @@ class Room:
             "owner_id": self.owner_id,
             "is_public": self.is_public,
             "is_bot_room": self.is_bot_room,
+            "group_name": self.group_name,
             "players": {pid: p.to_dict() for pid, p in self.players.items()},
             "player_count": len(self.players),
             "state": self.state,
@@ -172,12 +174,12 @@ class GameManager:
     def generate_player_id(self) -> str:
         return ''.join(random.choices(string.ascii_lowercase + string.digits, k=12))
 
-    def create_room(self, is_public: bool = False, is_bot_room: bool = False, chat_id: str = None) -> Room:
+    def create_room(self, is_public: bool = False, is_bot_room: bool = False, chat_id: str = None, group_name: str = None) -> Room:
         """Create a new room"""
         room_id = self.generate_room_id()
         while room_id in self.rooms:
             room_id = self.generate_room_id()
-        room = Room(id=room_id, is_public=is_public, is_bot_room=is_bot_room)
+        room = Room(id=room_id, is_public=is_public, is_bot_room=is_bot_room, group_name=group_name)
         self.rooms[room_id] = room
 
         # Link to Telegram chat if provided
@@ -186,13 +188,16 @@ class GameManager:
 
         return room
 
-    def get_or_create_chat_room(self, chat_id: str) -> Room:
+    def get_or_create_chat_room(self, chat_id: str, group_name: str = None) -> Room:
         """Get existing room for Telegram chat or create new one"""
         # Check if room exists for this chat
         if chat_id in self.chat_rooms:
             room_id = self.chat_rooms[chat_id]
             if room_id in self.rooms:
                 room = self.rooms[room_id]
+                # Update group name if provided and not set
+                if group_name and not room.group_name:
+                    room.group_name = group_name
                 # Only return if room is in joinable state
                 if room.state == "waiting" and len(room.players) < MAX_PLAYERS_PER_ROOM:
                     return room
@@ -200,7 +205,7 @@ class GameManager:
                 del self.chat_rooms[chat_id]
 
         # Create new room for this chat
-        return self.create_room(is_public=False, chat_id=chat_id)
+        return self.create_room(is_public=False, chat_id=chat_id, group_name=group_name)
 
     def add_bot(self, room: Room) -> Player:
         """Add a bot player to the room"""
@@ -728,7 +733,8 @@ async def websocket_endpoint(websocket: WebSocket):
                 return
 
             chat_id = str(chat_id)
-            room = game_manager.get_or_create_chat_room(chat_id)
+            group_name = message.get("group_name")
+            room = game_manager.get_or_create_chat_room(chat_id, group_name)
             player = game_manager.add_player(room, name, websocket)
 
         else:
