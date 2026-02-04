@@ -45,6 +45,9 @@ class SumoGame {
         document.getElementById('copy-code-btn').addEventListener('click', () => this.copyRoomCode());
         document.getElementById('share-btn').addEventListener('click', () => this.shareRoom());
 
+        // Event listeners - Result screen
+        document.getElementById('rematch-btn').addEventListener('click', () => this.rematch());
+
         // Canvas resize
         this.resizeCanvas();
         window.addEventListener('resize', () => this.resizeCanvas());
@@ -193,7 +196,12 @@ class SumoGame {
 
             case 'finished':
                 this.room = message.room;
+                this.isOwner = this.room.owner_id === this.playerId;
                 this.showResult(message.winner);
+                break;
+
+            case 'rematch_starting':
+                this.room = message.room;
                 break;
         }
     }
@@ -273,6 +281,8 @@ class SumoGame {
     showResult(winnerId) {
         this.showScreen('result-screen');
         const resultText = document.getElementById('result-text');
+        const rematchBtn = document.getElementById('rematch-btn');
+        const resultHint = document.getElementById('result-hint');
 
         if (winnerId === this.playerId) {
             resultText.textContent = 'Победа!';
@@ -287,6 +297,21 @@ class SumoGame {
         } else {
             resultText.textContent = 'Ничья!';
             resultText.className = 'result-text';
+        }
+
+        // Show rematch button for owner
+        if (this.isOwner && Object.keys(this.room.players).length >= 2) {
+            rematchBtn.style.display = 'block';
+            resultHint.textContent = 'Нажми РЕВАНШ для новой игры';
+        } else {
+            rematchBtn.style.display = 'none';
+            resultHint.textContent = 'Ожидание реванша от хоста...';
+        }
+    }
+
+    rematch() {
+        if (this.ws?.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({ type: 'rematch' }));
         }
     }
 

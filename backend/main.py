@@ -187,6 +187,44 @@ class GameManager:
         room.countdown = COUNTDOWN_SECONDS
         return True
 
+    def rematch(self, player_id: str) -> bool:
+        """Start rematch - only owner can do this"""
+        if player_id not in self.player_rooms:
+            return False
+
+        room_id = self.player_rooms[player_id]
+        room = self.rooms.get(room_id)
+
+        if not room:
+            return False
+
+        # Only owner can start rematch
+        if room.owner_id != player_id:
+            return False
+
+        # Need at least 2 players
+        if len(room.players) < MIN_PLAYERS_TO_START:
+            return False
+
+        # Can only rematch from finished state
+        if room.state != "finished":
+            return False
+
+        # Reset for new round
+        room.state = "countdown"
+        room.winner = None
+        room.countdown = COUNTDOWN_SECONDS
+        for i, player in enumerate(room.players.values()):
+            player.alive = True
+            angle = 2 * math.pi * i / len(room.players)
+            distance = ARENA_RADIUS * 0.6
+            player.x = math.cos(angle) * distance
+            player.y = math.sin(angle) * distance
+            player.vx = 0
+            player.vy = 0
+
+        return True
+
     def apply_input(self, player_id: str, dx: float, dy: float):
         if player_id not in self.player_rooms:
             return
@@ -328,20 +366,8 @@ class GameManager:
                     "winner": room.winner,
                     "room": room.to_dict(),
                 })
-                await asyncio.sleep(3)
-
-                # Reset for new round
-                room.state = "waiting"
-                room.winner = None
-                room.countdown = COUNTDOWN_SECONDS
-                for i, player in enumerate(room.players.values()):
-                    player.alive = True
-                    angle = 2 * math.pi * i / len(room.players)
-                    distance = ARENA_RADIUS * 0.6
-                    player.x = math.cos(angle) * distance
-                    player.y = math.sin(angle) * distance
-                    player.vx = 0
-                    player.vy = 0
+                # Wait for rematch command from owner
+                await asyncio.sleep(0.1)
 
             else:
                 await asyncio.sleep(0.1)
@@ -447,6 +473,13 @@ async def websocket_endpoint(websocket: WebSocket):
                 if game_manager.start_game(player.id):
                     await game_manager.broadcast(room, {
                         "type": "game_starting",
+                        "room": room.to_dict(),
+                    })
+
+            elif message.get("type") == "rematch":
+                if game_manager.rematch(player.id):
+                    await game_manager.broadcast(room, {
+                        "type": "rematch_starting",
                         "room": room.to_dict(),
                     })
 
