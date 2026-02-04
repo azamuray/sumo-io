@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Sumo.io</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <!-- Join Screen -->
+    <div id="join-screen" class="screen active">
+        <div class="logo">SUMO<span>.io</span></div>
+        <p class="tagline">Столкни всех с арены!</p>
+        <input type="text" id="player-name" placeholder="Твоё имя" maxlength="15">
+        <button id="play-btn" class="btn-primary">ИГРАТЬ</button>
+    </div>
+
+    <!-- Waiting Screen -->
+    <div id="waiting-screen" class="screen">
+        <div class="waiting-title">Ожидание игроков...</div>
+        <div id="players-list" class="players-list"></div>
+        <div class="waiting-hint">Минимум 2 игрока для старта</div>
+    </div>
+
+    <!-- Countdown Screen -->
+    <div id="countdown-screen" class="screen">
+        <div id="countdown-number" class="countdown-number">5</div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="screen">
+        <canvas id="game-canvas"></canvas>
+        <div id="scoreboard" class="scoreboard"></div>
+    </div>
+
+    <!-- Result Screen -->
+    <div id="result-screen" class="screen">
+        <div id="result-text" class="result-text"></div>
+        <div class="result-hint">Новый раунд скоро начнётся...</div>
+    </div>
+
+    <script src="js/game.js"></script>
+</body>
+</html>

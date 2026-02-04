@@ -1,0 +1,229 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+button, input {
+    touch-action: manipulation;
+}
+
+.screen {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.screen.active {
+    display: flex;
+}
+
+/* Join Screen */
+.logo {
+    font-size: 4rem;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 0 30px rgba(78, 205, 196, 0.5);
+    margin-bottom: 10px;
+}
+
+.logo span {
+    color: #4ECDC4;
+}
+
+.tagline {
+    color: #888;
+    font-size: 1.1rem;
+    margin-bottom: 40px;
+}
+
+#player-name {
+    width: 100%;
+    max-width: 300px;
+    padding: 15px 20px;
+    font-size: 1.1rem;
+    border: 2px solid #4ECDC4;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    text-align: center;
+    margin-bottom: 20px;
+    outline: none;
+    transition: all 0.3s;
+}
+
+#player-name::placeholder {
+    color: #666;
+}
+
+#player-name:focus {
+    border-color: #FF6B6B;
+    box-shadow: 0 0 20px rgba(255, 107, 107, 0.3);
+}
+
+.btn-primary {
+    width: 100%;
+    max-width: 300px;
+    padding: 18px 40px;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, #FF6B6B 0%, #ee5a5a 100%);
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(255, 107, 107, 0.4);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+/* Waiting Screen */
+.waiting-title {
+    font-size: 1.8rem;
+    color: #fff;
+    margin-bottom: 30px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.players-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 30px;
+}
+
+.player-tag {
+    padding: 10px 20px;
+    border-radius: 20px;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.waiting-hint {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* Countdown Screen */
+.countdown-number {
+    font-size: 10rem;
+    font-weight: 900;
+    color: #FF6B6B;
+    text-shadow: 0 0 50px rgba(255, 107, 107, 0.5);
+    animation: countdownPulse 1s infinite;
+}
+
+@keyframes countdownPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* Game Screen */
+#game-screen {
+    padding: 0;
+}
+
+#game-canvas {
+    display: block;
+    touch-action: none;
+    user-select: none;
+}
+
+.scoreboard {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 10px;
+    padding: 10px 15px;
+}
+
+.score-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #fff;
+    font-size: 0.85rem;
+    margin-bottom: 5px;
+}
+
+.score-item:last-child {
+    margin-bottom: 0;
+}
+
+.score-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.score-name {
+    flex: 1;
+}
+
+.score-value {
+    font-weight: 700;
+}
+
+/* Result Screen */
+.result-text {
+    font-size: 2rem;
+    color: #fff;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.result-text.win {
+    color: #4ECDC4;
+}
+
+.result-text.lose {
+    color: #FF6B6B;
+}
+
+.result-hint {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* Mobile optimizations */
+@media (max-width: 480px) {
+    .logo {
+        font-size: 3rem;
+    }
+
+    .countdown-number {
+        font-size: 7rem;
+    }
+}
