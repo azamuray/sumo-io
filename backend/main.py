@@ -204,16 +204,18 @@ class GameManager:
         alive_players = [p for p in room.players.values() if p.alive]
 
         for bot in alive_bots:
-            # Find nearest non-bot player or nearest player
-            targets = [p for p in alive_players if p.id != bot.id and not p.is_bot]
-            if not targets:
-                targets = [p for p in alive_players if p.id != bot.id]
+            # Target any player (bot or human) - fair fight!
+            targets = [p for p in alive_players if p.id != bot.id]
 
             if targets:
-                # Move toward nearest target
-                nearest = min(targets, key=lambda p: math.sqrt((p.x - bot.x)**2 + (p.y - bot.y)**2))
-                dx = nearest.x - bot.x
-                dy = nearest.y - bot.y
+                # Pick target: nearest player OR random player (adds variety)
+                if random.random() < 0.7:  # 70% chase nearest
+                    target = min(targets, key=lambda p: math.sqrt((p.x - bot.x)**2 + (p.y - bot.y)**2))
+                else:  # 30% chase random target
+                    target = random.choice(targets)
+
+                dx = target.x - bot.x
+                dy = target.y - bot.y
             else:
                 # Move toward center if alone
                 dx = -bot.x
@@ -225,12 +227,12 @@ class GameManager:
                 dx = dx / distance
                 dy = dy / distance
                 # Add randomness to make bots less predictable
-                dx += random.uniform(-0.3, 0.3)
-                dy += random.uniform(-0.3, 0.3)
+                dx += random.uniform(-0.4, 0.4)
+                dy += random.uniform(-0.4, 0.4)
                 # Bots don't push every frame - random chance
-                if random.random() < 0.15:  # 15% chance per tick
-                    bot.vx += dx * 1.2
-                    bot.vy += dy * 1.2
+                if random.random() < 0.12:  # 12% chance per tick
+                    bot.vx += dx * 1.0
+                    bot.vy += dy * 1.0
 
     def get_bot_room_count(self) -> int:
         """Count active bot rooms in waiting state"""
