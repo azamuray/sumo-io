@@ -90,6 +90,10 @@ class SumoGame {
 
         // Event listeners - Result screen
         document.getElementById('rematch-btn').addEventListener('click', () => this.rematch());
+        document.getElementById('leave-btn').addEventListener('click', () => this.exitGame());
+
+        // Event listeners - Game screen
+        document.getElementById('exit-btn').addEventListener('click', () => this.exitGame());
 
         // Canvas resize
         this.resizeCanvas();
@@ -426,6 +430,26 @@ class SumoGame {
         }
     }
 
+    exitGame() {
+        // Close WebSocket connection
+        if (this.ws) {
+            this.ws.close();
+            this.ws = null;
+        }
+        // Reset state
+        this.room = null;
+        this.playerId = null;
+        this.isOwner = false;
+        // Hide exit button
+        document.getElementById('exit-btn').style.display = 'none';
+        // Go back to menu
+        this.showScreen('menu-screen');
+        // Reload lobby if not in group mode
+        if (!this.chatId) {
+            this.refreshLobby();
+        }
+    }
+
     onInputStart(x, y) {
         this.inputActive = true;
         this.inputStart = { x, y };
@@ -461,7 +485,19 @@ class SumoGame {
     render() {
         requestAnimationFrame(() => this.render());
 
-        if (!this.room || this.room.state !== 'playing') return;
+        if (!this.room || this.room.state !== 'playing') {
+            document.getElementById('exit-btn').style.display = 'none';
+            return;
+        }
+
+        // Show exit button if player is dead
+        const myPlayer = this.room.players[this.playerId];
+        const exitBtn = document.getElementById('exit-btn');
+        if (myPlayer && !myPlayer.alive) {
+            exitBtn.style.display = 'block';
+        } else {
+            exitBtn.style.display = 'none';
+        }
 
         const ctx = this.ctx;
         const width = this.canvas.width;

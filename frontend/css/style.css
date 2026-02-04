@@ -464,6 +464,23 @@ input[type="text"]:focus {
     -webkit-backdrop-filter: blur(10px);
 }
 
+.exit-btn {
+    position: absolute;
+    bottom: calc(30px + var(--safe-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 32px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+    background: rgba(255, 107, 107, 0.8);
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
 .score-item {
     display: flex;
     align-items: center;
@@ -527,6 +544,13 @@ input[type="text"]:focus {
 
 #result-screen .btn-primary {
     margin-top: 24px;
+}
+
+#result-screen .btn-leave {
+    margin-top: 12px;
+    max-width: 200px;
+    padding: 12px 24px;
+    font-size: 0.85rem;
 }
 
 /* Small phones (iPhone SE, etc) */
