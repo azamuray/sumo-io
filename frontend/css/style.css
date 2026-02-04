@@ -2,19 +2,35 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+:root {
+    --primary: #FF6B6B;
+    --secondary: #4ECDC4;
+    --bg-dark: #1a1a2e;
+    --bg-light: #16213e;
+    --text: #fff;
+    --text-muted: #888;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-light) 100%);
     min-height: 100vh;
+    min-height: -webkit-fill-available;
     overflow: hidden;
+    color: var(--text);
 }
 
 button, input {
     touch-action: manipulation;
+    font-family: inherit;
 }
 
+/* Screens */
 .screen {
     display: none;
     position: fixed;
@@ -25,7 +41,10 @@ button, input {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 16px;
+    padding-top: calc(16px + var(--safe-top));
+    padding-bottom: calc(16px + var(--safe-bottom));
+    overflow-y: auto;
 }
 
 .screen.active {
@@ -34,124 +53,126 @@ button, input {
 
 /* Logo */
 .logo {
-    font-size: 4rem;
+    font-size: 2.8rem;
     font-weight: 900;
-    color: #fff;
+    color: var(--text);
     text-shadow: 0 0 30px rgba(78, 205, 196, 0.5);
-    margin-bottom: 10px;
+    margin-bottom: 4px;
+    letter-spacing: -1px;
 }
 
 .logo span {
-    color: #4ECDC4;
+    color: var(--secondary);
 }
 
 .tagline {
-    color: #888;
-    font-size: 1.1rem;
-    margin-bottom: 30px;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin-bottom: 24px;
 }
 
 /* Inputs */
 input[type="text"] {
     width: 100%;
-    max-width: 300px;
-    padding: 15px 20px;
-    font-size: 1.1rem;
-    border: 2px solid #4ECDC4;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
+    max-width: 320px;
+    padding: 14px 18px;
+    font-size: 1rem;
+    border: 2px solid var(--secondary);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text);
     text-align: center;
-    margin-bottom: 15px;
+    margin-bottom: 12px;
     outline: none;
-    transition: all 0.3s;
+    transition: all 0.2s ease;
 }
 
 input[type="text"]::placeholder {
-    color: #666;
+    color: #555;
 }
 
 input[type="text"]:focus {
-    border-color: #FF6B6B;
-    box-shadow: 0 0 20px rgba(255, 107, 107, 0.3);
+    border-color: var(--primary);
+    background: rgba(255, 255, 255, 0.12);
 }
 
 /* Buttons */
 .btn-primary {
     width: 100%;
-    max-width: 300px;
-    padding: 18px 40px;
-    font-size: 1.2rem;
+    max-width: 320px;
+    padding: 16px 24px;
+    font-size: 1rem;
     font-weight: 700;
-    color: #fff;
-    background: linear-gradient(135deg, #FF6B6B 0%, #ee5a5a 100%);
+    color: var(--text);
+    background: linear-gradient(135deg, var(--primary) 0%, #e55a5a 100%);
     border: none;
-    border-radius: 12px;
+    border-radius: 14px;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.2s ease;
     text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 30px rgba(255, 107, 107, 0.4);
+    letter-spacing: 0.5px;
 }
 
 .btn-primary:active {
-    transform: translateY(0);
+    transform: scale(0.98);
+    opacity: 0.9;
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .btn-secondary {
     width: 100%;
-    max-width: 300px;
-    padding: 15px 40px;
-    font-size: 1.1rem;
+    max-width: 320px;
+    padding: 14px 24px;
+    font-size: 0.95rem;
     font-weight: 600;
-    color: #4ECDC4;
+    color: var(--secondary);
     background: transparent;
-    border: 2px solid #4ECDC4;
-    border-radius: 12px;
+    border: 2px solid var(--secondary);
+    border-radius: 14px;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.2s ease;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
 }
 
-.btn-secondary:hover {
-    background: rgba(78, 205, 196, 0.1);
+.btn-secondary:active {
+    background: rgba(78, 205, 196, 0.15);
 }
 
 .btn-small {
-    padding: 8px 16px;
-    font-size: 0.85rem;
+    padding: 8px 14px;
+    font-size: 0.8rem;
     font-weight: 600;
-    color: #fff;
-    background: rgba(255, 255, 255, 0.2);
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.15);
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.2s ease;
 }
 
-.btn-small:hover {
-    background: rgba(255, 255, 255, 0.3);
+.btn-small:active {
+    background: rgba(255, 255, 255, 0.25);
 }
 
 .btn-start {
-    margin-top: 20px;
+    margin-top: 16px;
     animation: pulse-btn 2s infinite;
 }
 
 @keyframes pulse-btn {
     0%, 100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.4); }
-    50% { box-shadow: 0 0 0 15px rgba(255, 107, 107, 0); }
+    50% { box-shadow: 0 0 0 12px rgba(255, 107, 107, 0); }
 }
 
 .divider {
-    color: #666;
-    margin: 20px 0;
-    font-size: 0.9rem;
+    color: #555;
+    margin: 16px 0;
+    font-size: 0.85rem;
 }
 
 /* Create Options */
@@ -159,14 +180,16 @@ input[type="text"]:focus {
     display: flex;
     gap: 10px;
     width: 100%;
-    max-width: 300px;
+    max-width: 320px;
+    margin-bottom: 4px;
 }
 
 .create-options .btn-primary,
 .create-options .btn-secondary {
     flex: 1;
-    padding: 15px 10px;
-    font-size: 0.85rem;
+    padding: 14px 8px;
+    font-size: 0.75rem;
+    letter-spacing: 0;
 }
 
 /* Join Row */
@@ -174,105 +197,115 @@ input[type="text"]:focus {
     display: flex;
     gap: 10px;
     width: 100%;
-    max-width: 300px;
+    max-width: 320px;
 }
 
 .join-row input {
     flex: 1;
     max-width: none;
     margin-bottom: 0;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
 }
 
 .join-row .btn-secondary {
     width: auto;
-    padding: 15px 25px;
+    padding: 14px 20px;
+    flex-shrink: 0;
 }
 
 /* Lobby Section */
 .lobby-section {
     width: 100%;
-    max-width: 350px;
-    margin-top: 25px;
+    max-width: 320px;
+    margin-top: 20px;
 }
 
 .lobby-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    color: #888;
-    font-size: 0.9rem;
-    margin-bottom: 10px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .lobby-list {
     background: rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
-    max-height: 200px;
+    border-radius: 14px;
+    max-height: 180px;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .lobby-empty {
-    padding: 20px;
+    padding: 24px 16px;
     text-align: center;
-    color: #666;
-    font-size: 0.9rem;
+    color: #555;
+    font-size: 0.85rem;
 }
 
 .lobby-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 15px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .lobby-item:last-child {
     border-bottom: none;
 }
 
+.lobby-item.bot-room {
+    background: rgba(78, 205, 196, 0.08);
+}
+
 .lobby-info {
     display: flex;
     flex-direction: column;
     gap: 2px;
+    min-width: 0;
+    flex: 1;
 }
 
 .lobby-host {
-    color: #fff;
-    font-size: 0.95rem;
+    color: var(--text);
+    font-size: 0.9rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .lobby-players {
-    color: #888;
-    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-size: 0.75rem;
 }
 
 .lobby-join-btn {
-    padding: 8px 16px;
+    padding: 8px 14px;
     font-size: 0.8rem;
     font-weight: 600;
-    color: #fff;
-    background: #4ECDC4;
+    color: var(--bg-dark);
+    background: var(--secondary);
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.3s;
-}
-
-.lobby-join-btn:hover {
-    background: #3dbdb5;
-}
-
-.lobby-item.bot-room {
-    background: rgba(78, 205, 196, 0.1);
+    flex-shrink: 0;
+    margin-left: 10px;
 }
 
 .bot-badge {
     display: inline-block;
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     font-weight: 700;
-    background: #4ECDC4;
-    color: #1a1a2e;
-    padding: 2px 6px;
+    background: var(--secondary);
+    color: var(--bg-dark);
+    padding: 2px 5px;
     border-radius: 4px;
     margin-left: 6px;
     vertical-align: middle;
@@ -281,18 +314,21 @@ input[type="text"]:focus {
 /* Group Info */
 .group-info {
     text-align: center;
-    margin-top: 30px;
     padding: 20px;
+    position: absolute;
+    bottom: 80px;
+    left: 0;
+    right: 0;
 }
 
 .group-icon {
-    font-size: 3rem;
-    margin-bottom: 15px;
+    font-size: 2.5rem;
+    margin-bottom: 12px;
 }
 
 .group-text {
-    color: #4ECDC4;
-    font-size: 1.1rem;
+    color: var(--secondary);
+    font-size: 0.95rem;
     animation: pulse 1.5s infinite;
 }
 
@@ -304,73 +340,97 @@ input[type="text"]:focus {
 /* Room Code Display */
 .room-code-display {
     text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
+    width: 100%;
+    max-width: 320px;
 }
 
 .room-code-label {
-    color: #888;
-    font-size: 0.9rem;
-    margin-bottom: 5px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .room-code-value {
-    font-size: 3rem;
-    font-weight: 900;
-    color: #4ECDC4;
-    letter-spacing: 8px;
-    margin-bottom: 15px;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--secondary);
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    word-break: break-word;
+    line-height: 1.3;
+    padding: 0 10px;
+}
+
+/* When showing room code (4 letters), make it bigger */
+.room-code-value.code-style {
+    font-size: 2.2rem;
+    letter-spacing: 6px;
     text-shadow: 0 0 20px rgba(78, 205, 196, 0.5);
 }
 
 .room-code-display .btn-small {
-    margin: 0 5px;
+    margin: 0 4px;
 }
 
 /* Waiting Screen */
+#waiting-screen {
+    justify-content: flex-start;
+    padding-top: calc(60px + var(--safe-top));
+}
+
 .waiting-title {
-    font-size: 1.5rem;
-    color: #fff;
-    margin-bottom: 20px;
+    font-size: 1.2rem;
+    color: var(--text);
+    margin-bottom: 16px;
+    font-weight: 600;
 }
 
 .players-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 8px;
     justify-content: center;
-    margin-bottom: 20px;
-    max-width: 400px;
+    margin-bottom: 16px;
+    max-width: 340px;
+    padding: 0 10px;
 }
 
 .player-tag {
-    padding: 10px 20px;
+    padding: 8px 14px;
     border-radius: 20px;
-    color: #fff;
+    color: var(--text);
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .player-tag .owner-badge {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     background: rgba(255, 255, 255, 0.3);
-    padding: 2px 6px;
+    padding: 2px 5px;
     border-radius: 4px;
+    text-transform: uppercase;
 }
 
 .waiting-hint {
-    color: #666;
-    font-size: 0.9rem;
-    margin-top: 10px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-top: 8px;
+    text-align: center;
+    padding: 0 20px;
 }
 
 /* Countdown Screen */
 .countdown-number {
-    font-size: 10rem;
+    font-size: 8rem;
     font-weight: 900;
-    color: #FF6B6B;
+    color: var(--primary);
     text-shadow: 0 0 50px rgba(255, 107, 107, 0.5);
     animation: countdownPulse 1s infinite;
 }
@@ -390,24 +450,27 @@ input[type="text"]:focus {
     display: block;
     touch-action: none;
     user-select: none;
+    -webkit-user-select: none;
 }
 
 .scoreboard {
     position: absolute;
-    top: 10px;
+    top: calc(10px + var(--safe-top));
     left: 10px;
-    background: rgba(0, 0, 0, 0.5);
-    border-radius: 10px;
-    padding: 10px 15px;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 12px;
+    padding: 10px 12px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 }
 
 .score-item {
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #fff;
-    font-size: 0.85rem;
-    margin-bottom: 5px;
+    color: var(--text);
+    font-size: 0.8rem;
+    margin-bottom: 4px;
 }
 
 .score-item:last-child {
@@ -415,51 +478,96 @@ input[type="text"]:focus {
 }
 
 .score-dot {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
+    flex-shrink: 0;
 }
 
 .score-name {
     flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 80px;
 }
 
 .score-value {
     font-weight: 700;
+    min-width: 16px;
+    text-align: right;
 }
 
 /* Result Screen */
+#result-screen {
+    gap: 8px;
+}
+
 .result-text {
-    font-size: 2rem;
-    color: #fff;
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--text);
     text-align: center;
-    margin-bottom: 20px;
 }
 
 .result-text.win {
-    color: #4ECDC4;
+    color: var(--secondary);
+    text-shadow: 0 0 30px rgba(78, 205, 196, 0.5);
 }
 
 .result-text.lose {
-    color: #FF6B6B;
+    color: var(--primary);
 }
 
 .result-hint {
-    color: #666;
-    font-size: 0.9rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-top: 8px;
 }
 
-/* Mobile optimizations */
-@media (max-width: 480px) {
+#result-screen .btn-primary {
+    margin-top: 24px;
+}
+
+/* Small phones (iPhone SE, etc) */
+@media (max-height: 700px) {
     .logo {
-        font-size: 3rem;
+        font-size: 2.4rem;
     }
 
-    .room-code-value {
-        font-size: 2.5rem;
+    .tagline {
+        margin-bottom: 16px;
+    }
+
+    .lobby-section {
+        margin-top: 12px;
+    }
+
+    .lobby-list {
+        max-height: 140px;
     }
 
     .countdown-number {
-        font-size: 7rem;
+        font-size: 6rem;
+    }
+
+    #waiting-screen {
+        padding-top: calc(40px + var(--safe-top));
+    }
+}
+
+/* Large phones */
+@media (min-height: 850px) {
+    .logo {
+        font-size: 3.2rem;
+        margin-bottom: 8px;
+    }
+
+    .tagline {
+        margin-bottom: 32px;
+    }
+
+    .room-code-value {
+        font-size: 1.5rem;
     }
 }

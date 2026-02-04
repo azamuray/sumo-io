@@ -314,9 +314,11 @@ class SumoGame {
         if (this.room.group_name) {
             roomCodeLabel.textContent = 'Комната группы:';
             roomCodeValue.textContent = this.room.group_name;
+            roomCodeValue.classList.remove('code-style');
         } else {
             roomCodeLabel.textContent = 'Код комнаты:';
             roomCodeValue.textContent = this.room.id;
+            roomCodeValue.classList.add('code-style');
         }
 
         // Update players list
