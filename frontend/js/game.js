@@ -30,11 +30,18 @@ class SumoGame {
                 document.getElementById('player-name').value = user.first_name;
             }
 
-            // Check if opened from a group chat
+            // Check if opened from a group chat (native Mini App in group)
             const chat = tg.initDataUnsafe?.chat;
             if (chat?.id) {
                 this.chatId = chat.id;
                 console.log('Opened from group chat:', chat.id, chat.title);
+            }
+
+            // Check startapp parameter (from URL button in group)
+            const startParam = tg.initDataUnsafe?.start_param;
+            if (startParam && startParam.startsWith('group_')) {
+                this.chatId = startParam.replace('group_', '');
+                console.log('Opened from group link, chat_id:', this.chatId);
             }
 
             // Apply Telegram theme

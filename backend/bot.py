@@ -1,7 +1,7 @@
 import os
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, ReplyKeyboardMarkup, KeyboardButton
 
 # Get bot token from environment
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
@@ -15,20 +15,29 @@ dp = Dispatcher()
 @dp.message(Command("play", "start", "game"))
 async def cmd_play(message: types.Message):
     """Handle /play, /start, /game commands"""
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(
-            text="🎮 Играть в Sumo.io",
-            web_app=WebAppInfo(url=WEBAPP_URL)
-        )]
-    ])
 
-    # Different message for group vs private chat
+    # Different message and button for group vs private chat
     if message.chat.type in ["group", "supergroup"]:
-        text = "🏟 Кто хочет сразиться?\n\nНажми кнопку ниже — все из этой группы попадут в одну комнату!"
+        # In groups, use inline URL button (web_app doesn't work in groups with inline)
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(
+                text="🎮 Играть в Sumo.io",
+                url=f"{WEBAPP_URL}?startapp=group_{message.chat.id}"
+            )]
+        ])
+        text = "🏟 Кто хочет сразиться?\n\nНажми кнопку — все из группы попадут в одну комнату!"
+        await message.answer(text, reply_markup=keyboard)
     else:
+        # In private chat, use web_app button for native experience
+        keyboard = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(
+                text="🎮 Играть",
+                web_app=WebAppInfo(url=WEBAPP_URL)
+            )]],
+            resize_keyboard=True
+        )
         text = "👋 Добро пожаловать в Sumo.io!\n\nСталкивай соперников с арены и побеждай!"
-
-    await message.answer(text, reply_markup=keyboard)
+        await message.answer(text, reply_markup=keyboard)
 
 
 @dp.message(Command("help"))
