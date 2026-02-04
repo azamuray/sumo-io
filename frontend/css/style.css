@@ -262,6 +262,22 @@ input[type="text"]:focus {
     background: #3dbdb5;
 }
 
+.lobby-item.bot-room {
+    background: rgba(78, 205, 196, 0.1);
+}
+
+.bot-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    background: #4ECDC4;
+    color: #1a1a2e;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
 /* Room Code Display */
 .room-code-display {
     text-align: center;

@@ -8,8 +8,23 @@ from typing import Optional
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 
-app = FastAPI(title="Sumo.io API")
+# Forward declaration for lifespan
+game_manager = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Start bot rooms on app startup"""
+    global game_manager
+    game_manager = GameManager()
+    # Start maintaining bot rooms
+    asyncio.create_task(game_manager.maintain_bot_rooms())
+    yield
+
+
+app = FastAPI(title="Sumo.io API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -19,15 +34,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Game constants
-ARENA_RADIUS = 400  # Increased from 300
+ARENA_RADIUS = 400
 PLAYER_RADIUS = 25
-FRICTION = 0.96  # More friction (was 0.98)
-BOUNCE_FORCE = 8  # Reduced from 15
+FRICTION = 0.96
+BOUNCE_FORCE = 8
 TICK_RATE = 1 / 60  # 60 FPS
 MAX_PLAYERS_PER_ROOM = 8
 MIN_PLAYERS_TO_START = 2
 COUNTDOWN_SECONDS = 3
+
+# Bot constants
+BOT_ROOMS_MIN = 2
+BOT_ROOMS_MAX = 5
+BOT_NAMES = [
+    "Борец", "Силач", "Толкач", "Сумоист", "Чемпион",
+    "Гром", "Молния", "Скала", "Титан", "Воин",
+    "Буря", "Вихрь", "Танк", "Медведь", "Бык",
+    "Самурай", "Ниндзя", "Дракон", "Феникс", "Лев"
+]
 
 
 @dataclass
@@ -42,6 +68,7 @@ class Player:
     alive: bool = True
     score: int = 0
     websocket: Optional[WebSocket] = None
+    is_bot: bool = False
 
     def to_dict(self):
         return {
@@ -54,6 +81,7 @@ class Player:
             "color": self.color,
             "alive": self.alive,
             "score": self.score,
+            "is_bot": self.is_bot,
         }
 
 
@@ -62,6 +90,7 @@ class Room:
     id: str
     owner_id: Optional[str] = None  # Creator of the room
     is_public: bool = False  # Public rooms visible in lobby
+    is_bot_room: bool = False  # Room with bots
     players: dict[str, Player] = field(default_factory=dict)
     state: str = "waiting"  # waiting, countdown, playing, finished
     countdown: int = COUNTDOWN_SECONDS
@@ -72,6 +101,7 @@ class Room:
             "id": self.id,
             "owner_id": self.owner_id,
             "is_public": self.is_public,
+            "is_bot_room": self.is_bot_room,
             "players": {pid: p.to_dict() for pid, p in self.players.items()},
             "player_count": len(self.players),
             "state": self.state,
@@ -92,7 +122,16 @@ class Room:
             "max_players": MAX_PLAYERS_PER_ROOM,
             "owner_name": owner_name,
             "state": self.state,
+            "is_bot_room": self.is_bot_room,
         }
+
+    def has_real_players(self) -> bool:
+        """Check if room has any non-bot players"""
+        return any(not p.is_bot for p in self.players.values())
+
+    def get_real_player_count(self) -> int:
+        """Count non-bot players"""
+        return sum(1 for p in self.players.values() if not p.is_bot)
 
 
 class GameManager:
@@ -110,14 +149,113 @@ class GameManager:
     def generate_player_id(self) -> str:
         return ''.join(random.choices(string.ascii_lowercase + string.digits, k=12))
 
-    def create_room(self, is_public: bool = False) -> Room:
+    def create_room(self, is_public: bool = False, is_bot_room: bool = False) -> Room:
         """Create a new room"""
         room_id = self.generate_room_id()
         while room_id in self.rooms:
             room_id = self.generate_room_id()
-        room = Room(id=room_id, is_public=is_public)
+        room = Room(id=room_id, is_public=is_public, is_bot_room=is_bot_room)
         self.rooms[room_id] = room
         return room
+
+    def add_bot(self, room: Room) -> Player:
+        """Add a bot player to the room"""
+        bot_id = "bot_" + self.generate_player_id()
+        x, y = self.spawn_position(room)
+        color = self.colors[len(room.players) % len(self.colors)]
+        name = random.choice(BOT_NAMES)
+
+        bot = Player(
+            id=bot_id,
+            name=name,
+            x=x,
+            y=y,
+            color=color,
+            is_bot=True,
+        )
+
+        room.players[bot_id] = bot
+        self.player_rooms[bot_id] = room.id
+
+        if room.owner_id is None:
+            room.owner_id = bot_id
+
+        return bot
+
+    def create_bot_room(self) -> Room:
+        """Create a public room with bots"""
+        room = self.create_room(is_public=True, is_bot_room=True)
+
+        # Add 2-7 bots (leave space for real player)
+        num_bots = random.randint(2, 7)
+        for _ in range(num_bots):
+            self.add_bot(room)
+
+        # Start game loop
+        asyncio.create_task(self.run_game_loop(room))
+        return room
+
+    def update_bot_ai(self, room: Room):
+        """Update bot movements"""
+        if room.state != "playing":
+            return
+
+        alive_bots = [p for p in room.players.values() if p.alive and p.is_bot]
+        alive_players = [p for p in room.players.values() if p.alive]
+
+        for bot in alive_bots:
+            # Find nearest non-bot player or nearest player
+            targets = [p for p in alive_players if p.id != bot.id and not p.is_bot]
+            if not targets:
+                targets = [p for p in alive_players if p.id != bot.id]
+
+            if targets:
+                # Move toward nearest target
+                nearest = min(targets, key=lambda p: math.sqrt((p.x - bot.x)**2 + (p.y - bot.y)**2))
+                dx = nearest.x - bot.x
+                dy = nearest.y - bot.y
+            else:
+                # Move toward center if alone
+                dx = -bot.x
+                dy = -bot.y
+
+            # Normalize and apply force (with some randomness)
+            distance = math.sqrt(dx * dx + dy * dy)
+            if distance > 0:
+                dx = dx / distance
+                dy = dy / distance
+                # Add randomness to make bots less predictable
+                dx += random.uniform(-0.3, 0.3)
+                dy += random.uniform(-0.3, 0.3)
+                # Bots don't push every frame - random chance
+                if random.random() < 0.15:  # 15% chance per tick
+                    bot.vx += dx * 1.2
+                    bot.vy += dy * 1.2
+
+    def get_bot_room_count(self) -> int:
+        """Count active bot rooms in waiting state"""
+        return sum(1 for r in self.rooms.values()
+                   if r.is_bot_room and r.state == "waiting")
+
+    async def maintain_bot_rooms(self):
+        """Background task to maintain bot rooms"""
+        while True:
+            try:
+                current_count = self.get_bot_room_count()
+
+                # Create more bot rooms if needed
+                while current_count < BOT_ROOMS_MIN:
+                    self.create_bot_room()
+                    current_count += 1
+
+                # Occasionally create extra rooms up to max
+                if current_count < BOT_ROOMS_MAX and random.random() < 0.1:
+                    self.create_bot_room()
+
+            except Exception as e:
+                print(f"Error maintaining bot rooms: {e}")
+
+            await asyncio.sleep(5)  # Check every 5 seconds
 
     def get_public_rooms(self) -> list[dict]:
         """Get list of public rooms that can be joined"""
@@ -353,8 +491,36 @@ class GameManager:
             self.remove_player(pid)
 
     async def run_game_loop(self, room: Room):
+        rematch_timer = 0  # For auto-rematch in bot rooms
+
         while room.id in self.rooms and len(room.players) > 0:
+            # For bot rooms: if no real players, stay in waiting
+            if room.is_bot_room and not room.has_real_players():
+                if room.state != "waiting":
+                    # Reset room if all real players left
+                    room.state = "waiting"
+                    room.winner = None
+                    room.countdown = COUNTDOWN_SECONDS
+                    for i, player in enumerate(room.players.values()):
+                        player.alive = True
+                        angle = 2 * math.pi * i / len(room.players)
+                        distance = ARENA_RADIUS * 0.6
+                        player.x = math.cos(angle) * distance
+                        player.y = math.sin(angle) * distance
+                        player.vx = 0
+                        player.vy = 0
+                await asyncio.sleep(0.1)
+                continue
+
             if room.state == "waiting":
+                # Auto-start bot rooms when real player joins
+                if room.is_bot_room and room.has_real_players():
+                    room.state = "countdown"
+                    room.countdown = COUNTDOWN_SECONDS
+                    await self.broadcast(room, {
+                        "type": "game_starting",
+                        "room": room.to_dict(),
+                    })
                 await asyncio.sleep(0.1)
 
             elif room.state == "countdown":
@@ -379,6 +545,7 @@ class GameManager:
                         player.alive = True
 
             elif room.state == "playing":
+                self.update_bot_ai(room)  # Update bot movements
                 self.update_physics(room)
                 await self.broadcast(room, {
                     "type": "state",
@@ -392,14 +559,32 @@ class GameManager:
                     "winner": room.winner,
                     "room": room.to_dict(),
                 })
-                # Wait for rematch command from owner
+
+                # Auto-rematch in bot rooms after 3 seconds
+                if room.is_bot_room and room.has_real_players():
+                    rematch_timer += 0.1
+                    if rematch_timer >= 3.0:
+                        rematch_timer = 0
+                        room.state = "countdown"
+                        room.winner = None
+                        room.countdown = COUNTDOWN_SECONDS
+                        for i, player in enumerate(room.players.values()):
+                            player.alive = True
+                            angle = 2 * math.pi * i / len(room.players)
+                            distance = ARENA_RADIUS * 0.6
+                            player.x = math.cos(angle) * distance
+                            player.y = math.sin(angle) * distance
+                            player.vx = 0
+                            player.vy = 0
+                        await self.broadcast(room, {
+                            "type": "rematch_starting",
+                            "room": room.to_dict(),
+                        })
+
                 await asyncio.sleep(0.1)
 
             else:
                 await asyncio.sleep(0.1)
-
-
-game_manager = GameManager()
 
 
 @app.get("/health")

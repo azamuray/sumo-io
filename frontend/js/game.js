@@ -122,15 +122,20 @@ class SumoGame {
             return;
         }
 
-        container.innerHTML = rooms.map(room => `
-            <div class="lobby-item">
-                <div class="lobby-info">
-                    <div class="lobby-host">${room.owner_name || 'Комната'} (${room.id})</div>
-                    <div class="lobby-players">${room.player_count}/${room.max_players} игроков</div>
+        container.innerHTML = rooms.map(room => {
+            const isBot = room.is_bot_room;
+            const label = isBot ? 'Быстрая игра' : (room.owner_name || 'Комната');
+            const badge = isBot ? '<span class="bot-badge">BOT</span>' : '';
+            return `
+                <div class="lobby-item ${isBot ? 'bot-room' : ''}">
+                    <div class="lobby-info">
+                        <div class="lobby-host">${label} ${badge}</div>
+                        <div class="lobby-players">${room.player_count}/${room.max_players} игроков</div>
+                    </div>
+                    <button class="lobby-join-btn" data-room-id="${room.id}">Играть</button>
                 </div>
-                <button class="lobby-join-btn" data-room-id="${room.id}">Войти</button>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
         // Add click handlers for join buttons
         container.querySelectorAll('.lobby-join-btn').forEach(btn => {
