@@ -138,6 +138,7 @@ class GameManager:
     def __init__(self):
         self.rooms: dict[str, Room] = {}
         self.player_rooms: dict[str, str] = {}  # player_id -> room_id
+        self.chat_rooms: dict[str, str] = {}  # telegram_chat_id -> room_id
         self.colors = [
             "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4",
             "#FFEAA7", "#DDA0DD", "#98D8C8", "#F7DC6F"
@@ -149,14 +150,35 @@ class GameManager:
     def generate_player_id(self) -> str:
         return ''.join(random.choices(string.ascii_lowercase + string.digits, k=12))
 
-    def create_room(self, is_public: bool = False, is_bot_room: bool = False) -> Room:
+    def create_room(self, is_public: bool = False, is_bot_room: bool = False, chat_id: str = None) -> Room:
         """Create a new room"""
         room_id = self.generate_room_id()
         while room_id in self.rooms:
             room_id = self.generate_room_id()
         room = Room(id=room_id, is_public=is_public, is_bot_room=is_bot_room)
         self.rooms[room_id] = room
+
+        # Link to Telegram chat if provided
+        if chat_id:
+            self.chat_rooms[chat_id] = room_id
+
         return room
+
+    def get_or_create_chat_room(self, chat_id: str) -> Room:
+        """Get existing room for Telegram chat or create new one"""
+        # Check if room exists for this chat
+        if chat_id in self.chat_rooms:
+            room_id = self.chat_rooms[chat_id]
+            if room_id in self.rooms:
+                room = self.rooms[room_id]
+                # Only return if room is in joinable state
+                if room.state == "waiting" and len(room.players) < MAX_PLAYERS_PER_ROOM:
+                    return room
+                # Room is full or playing - create new one
+                del self.chat_rooms[chat_id]
+
+        # Create new room for this chat
+        return self.create_room(is_public=False, chat_id=chat_id)
 
     def add_bot(self, room: Room) -> Player:
         """Add a bot player to the room"""
@@ -323,6 +345,10 @@ class GameManager:
             # Clean up empty rooms
             if len(room.players) == 0:
                 del self.rooms[room_id]
+                # Also clean up chat_rooms mapping
+                chat_ids_to_remove = [cid for cid, rid in self.chat_rooms.items() if rid == room_id]
+                for cid in chat_ids_to_remove:
+                    del self.chat_rooms[cid]
 
         del self.player_rooms[player_id]
 
@@ -655,6 +681,21 @@ async def websocket_endpoint(websocket: WebSocket):
                 await websocket.close()
                 return
 
+            player = game_manager.add_player(room, name, websocket)
+
+        elif msg_type == "join_chat":
+            # Join room for Telegram group chat
+            chat_id = message.get("chat_id")
+            if not chat_id:
+                await websocket.send_text(json.dumps({
+                    "type": "error",
+                    "message": "Не указан chat_id"
+                }))
+                await websocket.close()
+                return
+
+            chat_id = str(chat_id)
+            room = game_manager.get_or_create_chat_room(chat_id)
             player = game_manager.add_player(room, name, websocket)
 
         else:

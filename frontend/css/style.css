@@ -278,6 +278,29 @@ input[type="text"]:focus {
     vertical-align: middle;
 }
 
+/* Group Info */
+.group-info {
+    text-align: center;
+    margin-top: 30px;
+    padding: 20px;
+}
+
+.group-icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+}
+
+.group-text {
+    color: #4ECDC4;
+    font-size: 1.1rem;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
 /* Room Code Display */
 .room-code-display {
     text-align: center;

@@ -5,6 +5,7 @@ class SumoGame {
         this.room = null;
         this.isOwner = false;
         this.isPublicRoom = false;
+        this.chatId = null;  // Telegram group chat ID
         this.canvas = document.getElementById('game-canvas');
         this.ctx = this.canvas.getContext('2d');
 
@@ -29,6 +30,13 @@ class SumoGame {
                 document.getElementById('player-name').value = user.first_name;
             }
 
+            // Check if opened from a group chat
+            const chat = tg.initDataUnsafe?.chat;
+            if (chat?.id) {
+                this.chatId = chat.id;
+                console.log('Opened from group chat:', chat.id, chat.title);
+            }
+
             // Apply Telegram theme
             document.body.style.backgroundColor = tg.backgroundColor || '#1a1a2e';
         }
@@ -43,8 +51,17 @@ class SumoGame {
             if (e.key === 'Enter') this.joinRoom();
         });
 
-        // Load public rooms on start
-        this.refreshLobby();
+        // If opened from group chat, auto-join group room
+        if (this.chatId) {
+            this.showScreen('menu-screen');
+            document.querySelector('.lobby-section').style.display = 'none';
+            document.getElementById('group-info').style.display = 'block';
+            // Auto-connect after short delay to show UI
+            setTimeout(() => this.joinGroupRoom(), 500);
+        } else {
+            // Load public rooms on start
+            this.refreshLobby();
+        }
 
         // Event listeners - Waiting room
         document.getElementById('start-btn').addEventListener('click', () => this.startGame());
@@ -102,6 +119,11 @@ class SumoGame {
     createRoom(isPublic = false) {
         this.isPublicRoom = isPublic;
         this.connect('create');
+    }
+
+    joinGroupRoom() {
+        if (!this.chatId) return;
+        this.connect('join_chat');
     }
 
     async refreshLobby() {
@@ -180,6 +202,9 @@ class SumoGame {
                 }
                 if (action === 'create' && this.isPublicRoom) {
                     message.is_public = true;
+                }
+                if (action === 'join_chat' && this.chatId) {
+                    message.chat_id = this.chatId;
                 }
                 this.ws.send(JSON.stringify(message));
             };
