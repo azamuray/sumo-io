@@ -4,6 +4,7 @@ class SumoGame {
         this.playerId = null;
         this.room = null;
         this.isOwner = false;
+        this.isPublicRoom = false;
         this.canvas = document.getElementById('game-canvas');
         this.ctx = this.canvas.getContext('2d');
 
@@ -33,12 +34,17 @@ class SumoGame {
         }
 
         // Event listeners - Menu
-        document.getElementById('create-btn').addEventListener('click', () => this.createRoom());
+        document.getElementById('create-private-btn').addEventListener('click', () => this.createRoom(false));
+        document.getElementById('create-public-btn').addEventListener('click', () => this.createRoom(true));
         document.getElementById('join-btn').addEventListener('click', () => this.joinRoom());
+        document.getElementById('refresh-lobby-btn').addEventListener('click', () => this.refreshLobby());
 
         document.getElementById('room-code').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.joinRoom();
         });
+
+        // Load public rooms on start
+        this.refreshLobby();
 
         // Event listeners - Waiting room
         document.getElementById('start-btn').addEventListener('click', () => this.startGame());
@@ -93,8 +99,46 @@ class SumoGame {
         return document.getElementById('player-name').value.trim() || 'Игрок';
     }
 
-    createRoom() {
+    createRoom(isPublic = false) {
+        this.isPublicRoom = isPublic;
         this.connect('create');
+    }
+
+    async refreshLobby() {
+        try {
+            const response = await fetch('/api/rooms');
+            const data = await response.json();
+            this.renderLobby(data.rooms || []);
+        } catch (e) {
+            console.error('Failed to fetch public rooms:', e);
+        }
+    }
+
+    renderLobby(rooms) {
+        const container = document.getElementById('lobby-list');
+
+        if (rooms.length === 0) {
+            container.innerHTML = '<div class="lobby-empty">Нет публичных комнат</div>';
+            return;
+        }
+
+        container.innerHTML = rooms.map(room => `
+            <div class="lobby-item">
+                <div class="lobby-info">
+                    <div class="lobby-host">${room.owner_name || 'Комната'} (${room.id})</div>
+                    <div class="lobby-players">${room.player_count}/${room.max_players} игроков</div>
+                </div>
+                <button class="lobby-join-btn" data-room-id="${room.id}">Войти</button>
+            </div>
+        `).join('');
+
+        // Add click handlers for join buttons
+        container.querySelectorAll('.lobby-join-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const roomId = btn.dataset.roomId;
+                this.connect('join', roomId);
+            });
+        });
     }
 
     joinRoom() {
@@ -128,6 +172,9 @@ class SumoGame {
                 };
                 if (roomId) {
                     message.room_id = roomId;
+                }
+                if (action === 'create' && this.isPublicRoom) {
+                    message.is_public = true;
                 }
                 this.ws.send(JSON.stringify(message));
             };

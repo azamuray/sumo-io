@@ -13,10 +13,27 @@
         <div class="logo">SUMO<span>.io</span></div>
         <p class="tagline">Столкни всех с арены!</p>
         <input type="text" id="player-name" placeholder="Твоё имя" maxlength="15">
-        <button id="create-btn" class="btn-primary">СОЗДАТЬ КОМНАТУ</button>
-        <div class="divider">или</div>
-        <input type="text" id="room-code" placeholder="Код комнаты" maxlength="4" style="text-transform: uppercase;">
-        <button id="join-btn" class="btn-secondary">ПРИСОЕДИНИТЬСЯ</button>
+
+        <div class="create-options">
+            <button id="create-private-btn" class="btn-primary">ПРИВАТНАЯ КОМНАТА</button>
+            <button id="create-public-btn" class="btn-secondary">ПУБЛИЧНАЯ КОМНАТА</button>
+        </div>
+
+        <div class="divider">или войти по коду</div>
+        <div class="join-row">
+            <input type="text" id="room-code" placeholder="Код" maxlength="4" style="text-transform: uppercase;">
+            <button id="join-btn" class="btn-secondary">ВОЙТИ</button>
+        </div>
+
+        <div class="lobby-section">
+            <div class="lobby-header">
+                <span>Публичные комнаты</span>
+                <button id="refresh-lobby-btn" class="btn-small">Обновить</button>
+            </div>
+            <div id="lobby-list" class="lobby-list">
+                <div class="lobby-empty">Нет публичных комнат</div>
+            </div>
+        </div>
     </div>
 
     <!-- Waiting Screen -->

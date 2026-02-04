@@ -154,6 +154,114 @@ input[type="text"]:focus {
     font-size: 0.9rem;
 }
 
+/* Create Options */
+.create-options {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    max-width: 300px;
+}
+
+.create-options .btn-primary,
+.create-options .btn-secondary {
+    flex: 1;
+    padding: 15px 10px;
+    font-size: 0.85rem;
+}
+
+/* Join Row */
+.join-row {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    max-width: 300px;
+}
+
+.join-row input {
+    flex: 1;
+    max-width: none;
+    margin-bottom: 0;
+}
+
+.join-row .btn-secondary {
+    width: auto;
+    padding: 15px 25px;
+}
+
+/* Lobby Section */
+.lobby-section {
+    width: 100%;
+    max-width: 350px;
+    margin-top: 25px;
+}
+
+.lobby-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #888;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+}
+
+.lobby-list {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.lobby-empty {
+    padding: 20px;
+    text-align: center;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.lobby-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lobby-item:last-child {
+    border-bottom: none;
+}
+
+.lobby-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.lobby-host {
+    color: #fff;
+    font-size: 0.95rem;
+}
+
+.lobby-players {
+    color: #888;
+    font-size: 0.8rem;
+}
+
+.lobby-join-btn {
+    padding: 8px 16px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #fff;
+    background: #4ECDC4;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.lobby-join-btn:hover {
+    background: #3dbdb5;
+}
+
 /* Room Code Display */
 .room-code-display {
     text-align: center;

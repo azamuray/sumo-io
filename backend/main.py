@@ -61,6 +61,7 @@ class Player:
 class Room:
     id: str
     owner_id: Optional[str] = None  # Creator of the room
+    is_public: bool = False  # Public rooms visible in lobby
     players: dict[str, Player] = field(default_factory=dict)
     state: str = "waiting"  # waiting, countdown, playing, finished
     countdown: int = COUNTDOWN_SECONDS
@@ -70,12 +71,27 @@ class Room:
         return {
             "id": self.id,
             "owner_id": self.owner_id,
+            "is_public": self.is_public,
             "players": {pid: p.to_dict() for pid, p in self.players.items()},
+            "player_count": len(self.players),
             "state": self.state,
             "countdown": self.countdown,
             "winner": self.winner,
             "arena_radius": ARENA_RADIUS,
             "player_radius": PLAYER_RADIUS,
+        }
+
+    def to_lobby_dict(self):
+        """Minimal info for lobby list"""
+        owner_name = None
+        if self.owner_id and self.owner_id in self.players:
+            owner_name = self.players[self.owner_id].name
+        return {
+            "id": self.id,
+            "player_count": len(self.players),
+            "max_players": MAX_PLAYERS_PER_ROOM,
+            "owner_name": owner_name,
+            "state": self.state,
         }
 
 
@@ -94,14 +110,24 @@ class GameManager:
     def generate_player_id(self) -> str:
         return ''.join(random.choices(string.ascii_lowercase + string.digits, k=12))
 
-    def create_room(self) -> Room:
-        """Create a new private room"""
+    def create_room(self, is_public: bool = False) -> Room:
+        """Create a new room"""
         room_id = self.generate_room_id()
         while room_id in self.rooms:
             room_id = self.generate_room_id()
-        room = Room(id=room_id)
+        room = Room(id=room_id, is_public=is_public)
         self.rooms[room_id] = room
         return room
+
+    def get_public_rooms(self) -> list[dict]:
+        """Get list of public rooms that can be joined"""
+        public_rooms = []
+        for room in self.rooms.values():
+            if (room.is_public and
+                room.state == "waiting" and
+                len(room.players) < MAX_PLAYERS_PER_ROOM):
+                public_rooms.append(room.to_lobby_dict())
+        return public_rooms
 
     def get_room(self, room_id: str) -> Optional[Room]:
         """Get room by ID (case insensitive)"""
@@ -381,6 +407,12 @@ async def health():
     return {"status": "ok"}
 
 
+@app.get("/rooms")
+async def get_public_rooms():
+    """Get list of public rooms"""
+    return {"rooms": game_manager.get_public_rooms()}
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -398,7 +430,8 @@ async def websocket_endpoint(websocket: WebSocket):
 
         if msg_type == "create":
             # Create new room
-            room = game_manager.create_room()
+            is_public = message.get("is_public", False)
+            room = game_manager.create_room(is_public=is_public)
             player = game_manager.add_player(room, name, websocket)
 
         elif msg_type == "join":
