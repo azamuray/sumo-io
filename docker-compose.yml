@@ -6,6 +6,8 @@ services:
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
+      - BOT_TOKEN=${BOT_TOKEN:-}
+      - WEBAPP_URL=${WEBAPP_URL:-https://sumo.lovza.ru}
     networks:
       - internal
 

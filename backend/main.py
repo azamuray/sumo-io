@@ -1,27 +1,49 @@
 import asyncio
 import json
 import math
+import os
 import random
 import string
 from dataclasses import dataclass, field
 from typing import Optional
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+
+from bot import bot, process_update, BOT_TOKEN
 
 # Forward declaration for lifespan
 game_manager = None
 
+WEBAPP_URL = os.getenv("WEBAPP_URL", "https://sumo.lovza.ru")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Start bot rooms on app startup"""
+    """Start bot rooms and set webhook on app startup"""
     global game_manager
     game_manager = GameManager()
     # Start maintaining bot rooms
     asyncio.create_task(game_manager.maintain_bot_rooms())
+
+    # Set up Telegram webhook
+    if bot and BOT_TOKEN:
+        webhook_url = f"{WEBAPP_URL}/api/webhook"
+        try:
+            await bot.set_webhook(webhook_url)
+            print(f"Telegram webhook set to: {webhook_url}")
+        except Exception as e:
+            print(f"Failed to set webhook: {e}")
+
     yield
+
+    # Clean up webhook on shutdown
+    if bot and BOT_TOKEN:
+        try:
+            await bot.delete_webhook()
+        except:
+            pass
 
 
 app = FastAPI(title="Sumo.io API", lifespan=lifespan)
@@ -624,6 +646,17 @@ async def health():
 async def get_public_rooms():
     """Get list of public rooms"""
     return {"rooms": game_manager.get_public_rooms()}
+
+
+@app.post("/webhook")
+async def telegram_webhook(request: Request):
+    """Handle Telegram webhook updates"""
+    try:
+        update_data = await request.json()
+        await process_update(update_data)
+    except Exception as e:
+        print(f"Webhook error: {e}")
+    return {"ok": True}
 
 
 @app.websocket("/ws")
